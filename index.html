@@ -158,6 +158,8 @@
   .hbtn.spinning svg { animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+
+
   /* ── STATUS BAR ──────────────────────────────────── */
   .statusbar {
     background: var(--surface);
@@ -614,6 +616,53 @@
   }
 
   .del-btn:hover { color: #C0392B; }
+
+  .clear-filters-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 5px;
+  transition: background 0.15s;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.clear-filters-btn:hover {
+  background: rgba(184, 58, 16, 0.08);
+}
+
+.filter-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--border);
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.filter-btn:hover {
+  color: var(--text-3);
+}
+
+.filter-btn.active {
+  color: var(--accent);
+}
+
 </style>
 </head>
 <body>
@@ -670,6 +719,14 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Manage Feeds</span>
+      <button class="clear-filters-btn" onclick="clearAllFeedFilters()" title="Clear all filters" style="display: ${feedFilters.size === 0 ? 'none' : 'flex'};">
+        Clear All
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="11" y1="18" x2="13" y2="18"></line>
+        </svg>
+      </button>
       <button class="close-btn" onclick="closeModal('modal-feeds')">✕</button>
     </div>
     <div class="add-section">
@@ -740,6 +797,7 @@ let history   = load('rss_history', {});
 let lastFetch = load('rss_lastfetch', null);
 let viewMode = 'chrono'; // 'chrono' or 'source'
 let collapsedFeeds = new Set(load('rss_collapsed',[]));
+let feedFilters = new Set(load('rss_feedfilters',[]));
 
 // ─── Runtime state ────────────────────────────────────
 let allItems   = [];
@@ -918,6 +976,7 @@ async function refreshAll() {
 
   const t = now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
   setStatus(`Updated ${t}`, '');
+  updateFilterStatus();
 }
 
 function toggleViewMode() {
@@ -937,6 +996,31 @@ function toggleFeedCollapse(feedUrl) {
   renderFeed();
 }
 
+function toggleFeedFilter(feedUrl) {
+  if (feedFilters.has(feedUrl)) {
+    feedFilters.delete(feedUrl);
+  } else {
+    feedFilters.add(feedUrl);
+  }
+  save('rss_feedfilters', [...feedFilters]);
+  updateFilterStatus();
+  renderFeedList();
+  renderFeed();
+}
+
+function clearAllFeedFilters() {
+  feedFilters.clear();
+  save('rss_feedfilters', []);
+  updateFilterStatus();
+  renderFeedList();
+  renderFeed();
+}
+
+function updateFilterStatus() {
+  const filterText = feedFilters.size > 0 ? ` (${feedFilters.size} feed${feedFilters.size !== 1 ? 's' : ''} filtered)` : '';
+  document.getElementById('status-msg').textContent = `Viewing articles${filterText}`;
+}
+
 async function fetchOneFeed(feed) {
   const xml = await tryFetch(feed.url);
   return parseXML(xml, feed);
@@ -950,14 +1034,22 @@ function renderFeed() {
   const el  = document.getElementById('view-feed');
   let visible;
   if (viewMode === 'chrono') {
-    visible = allItems.filter(it => !readSet.has(it.id)).slice(0, MAX);
+    let filtered = allItems.filter(it => !readSet.has(it.id));
+    if (feedFilters.size > 0) {
+      filtered = filtered.filter(it => feedFilters.has(it.feedUrl));
+    }
+    visible = filtered.slice(0, MAX);
 } else {
   // Group by feed, take top 10 per feed
   const byFeed = {};
   allItems.filter(it => !readSet.has(it.id)).forEach(it => {
+    if (feedFilters.size > 0 && !feedFilters.has(it.feedUrl)) return; // skip if filtered out
     if (!byFeed[it.feedUrl]) byFeed[it.feedUrl] = [];
     byFeed[it.feedUrl].push(it);
   });
+
+  const filterText = feedFilters.size > 0 ? ` (${feedFilters.size} feed${feedFilters.size !== 1 ? 's' : ''} filtered)` : '';
+  document.getElementById('status-msg').textContent = `Viewing articles${filterText}`;
   
   let html = '';
   Object.entries(byFeed).forEach(([feedUrl, items]) => {
@@ -1188,14 +1280,27 @@ function openFeeds() {
 }
 
 function renderFeedList() {
-  document.getElementById('feed-list').innerHTML = feeds.map((f, i) => `
-    <div class="feed-row" id="frow-${i}">
+  document.getElementById('feed-list').innerHTML = feeds.map((f, i) => {
+    const isFiltered = feedFilters.has(f.url);
+    return `<div class="feed-row" id="frow-${i}">
       <div class="feed-info">
         <div class="feed-name">${esc(f.name || f.url)}</div>
         <div class="feed-url">${esc(f.url)}</div>
       </div>
+      <button class="filter-btn ${isFiltered ? 'active' : ''}" title="Filter to this feed" onclick="toggleFeedFilter('${f.url.replace(/'/g, "\\'")}')" data-url="${esc(f.url)}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="11" y1="18" x2="13" y2="18"></line>
+        </svg>
+      </button>
       <button class="del-btn" title="Remove" onclick="removeFeed(${i})">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  // Toggle clear button visibility
+  const clearBtn = document.querySelector('.clear-filters-btn');
+  if (clearBtn) clearBtn.style.display = feedFilters.size > 0 ? 'flex' : 'none';
 }
 
 async function addFeed() {
