@@ -369,6 +369,61 @@
     to { opacity: 0; transform: translateX(18px); max-height: 0; padding: 0; margin: 0; border-width: 0; }
   }
 
+  .feed-section {
+  margin-bottom: 8px;
+}
+
+.feed-header {
+  background: var(--border-soft);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  transition: background 0.15s;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.feed-header:hover {
+  background: var(--border);
+}
+
+.feed-header-toggle {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  transition: transform 0.2s;
+}
+
+.feed-header-name {
+  flex: 1;
+}
+
+.feed-header-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.feed-items {
+  max-height: none;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s;
+}
+
+.feed-items.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
   /* ── EMPTY / ERROR STATES ─────────────────────────── */
   .empty {
     text-align: center;
@@ -583,6 +638,10 @@
       </svg>
       Refresh
     </button>
+    <button class="hbtn" id="view-mode-btn" onclick="toggleViewMode()">
+      By Source
+      </button>
+    </button>
     <button class="hbtn" onclick="openFeeds()">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <circle cx="4" cy="4" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="4" cy="12" r="1.5"/>
@@ -679,6 +738,8 @@ let readSet   = new Set(load('rss_read', []));
 let bookmarks = load('rss_bookmarks', {});
 let history   = load('rss_history', {});
 let lastFetch = load('rss_lastfetch', null);
+let viewMode = 'chrono'; // 'chrono' or 'source'
+let collapsedFeeds = new Set(load('rss_collapsed',[]));
 
 // ─── Runtime state ────────────────────────────────────
 let allItems   = [];
@@ -859,6 +920,23 @@ async function refreshAll() {
   setStatus(`Updated ${t}`, '');
 }
 
+function toggleViewMode() {
+  viewMode = viewMode === 'chrono' ? 'source' : 'chrono';
+  const btn = document.getElementById('view-mode-btn');
+  btn.textContent = viewMode === 'chrono' ? 'By Source' : 'Chronological';
+  renderFeed();
+}
+
+function toggleFeedCollapse(feedUrl) {
+  if (collapsedFeeds.has(feedUrl)) {
+    collapsedFeeds.delete(feedUrl);
+  } else {
+    collapsedFeeds.add(feedUrl);
+  }
+  save('rss_collapsed', [...collapsedFeeds]);
+  renderFeed();
+}
+
 async function fetchOneFeed(feed) {
   const xml = await tryFetch(feed.url);
   return parseXML(xml, feed);
@@ -870,7 +948,39 @@ async function fetchOneFeed(feed) {
 
 function renderFeed() {
   const el  = document.getElementById('view-feed');
-  const visible = allItems.filter(it => !readSet.has(it.id)).slice(0, MAX);
+  let visible;
+  if (viewMode === 'chrono') {
+    visible = allItems.filter(it => !readSet.has(it.id)).slice(0, MAX);
+} else {
+  // Group by feed, take top 10 per feed
+  const byFeed = {};
+  allItems.filter(it => !readSet.has(it.id)).forEach(it => {
+    if (!byFeed[it.feedUrl]) byFeed[it.feedUrl] = [];
+    byFeed[it.feedUrl].push(it);
+  });
+  
+  let html = '';
+  Object.entries(byFeed).forEach(([feedUrl, items]) => {
+    const feedName = items[0]?.feedName || feedUrl;
+    const isCollapsed = collapsedFeeds.has(feedUrl);
+    const displayItems = items.slice(0, 10);
+    const feedId = makeId(feedUrl);
+    
+    html += `<div class="feed-section">
+      <div class="feed-header" onclick="toggleFeedCollapse('${feedUrl.replace(/'/g, "\\'")}')" title="Click to collapse">
+        <span class="feed-header-toggle">${isCollapsed ? '▶' : '▼'}</span>
+        <span class="feed-header-name">${esc(feedName)}</span>
+        <span class="feed-header-count">${displayItems.length}</span>
+      </div>
+      <div class="feed-items ${isCollapsed ? 'collapsed' : ''}" id="feed-${feedId}">
+        ${displayItems.map((it, i) => itemHTML(it, false, i)).join('')}
+      </div>
+    </div>`;
+  });
+  
+  el.innerHTML = html;
+  return;
+}
 
   document.getElementById('status-count').textContent =
     visible.length ? `${visible.length} unread` : '';
