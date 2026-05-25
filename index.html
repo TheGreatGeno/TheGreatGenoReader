@@ -1121,7 +1121,7 @@ function renderHistory() {
     el.innerHTML = `<div class="empty">
       <span class="empty-icon">⏱️</span>
       <p>No history yet.</p>
-      <small>Articles you mark done will appear here.</small>
+      <small>Articles you mark read will appear here.</small>
     </div>`;
     return;
   }
@@ -1161,9 +1161,7 @@ function itemHTML(it, isBmark, idx) {
         ${bmarked ? '★ Saved' : '☆ Bookmark'}
        </button>`;
 
-  const doneBtn = isBmark
-    ? ''
-    : `<button class="abtn" onclick="markDone('${it.id}')">✓ Done</button>`;
+  const doneBtn = `<button class="abtn" onclick="markDone('${it.id}')">✓ Read</button>`;
 
   return `<div class="item" id="item-${it.id}" style="animation-delay:${delay}s">
     <div class="item-inner">
