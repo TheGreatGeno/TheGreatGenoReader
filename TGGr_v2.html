@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Great Geno reader</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'><defs>
+  <style>.book-spine{fill:%231C1917}.book-page{fill:%23F4F1EB}.book-accent{fill:%23B83A10}</style></defs>
+  <g transform='translate(32,32)'><path class='book-spine' d='M -2,-20 L -2,20 Q 0,22 2,20 L 2,-20 Q 0,-22 -2,-20 Z'/>
+  <path class='book-page' d='M 2,-18 L 18,-18 Q 20,-18 20,-16 L 20,16 Q 20,18 18,18 L 2,18 Z'/>
+  <path class='book-page' d='M -2,-18 L -18,-18 Q -20,-18 -20,-16 L -20,16 Q -20,18 -18,18 L -2,18 Z'/>
+  <rect class='book-accent' x='5' y='-12' width='10' height='3' rx='1'/>
+  <line class='book-accent' x1='5' y1='-6' x2='15' y2='-6' stroke='%23B83A10' stroke-width='1.5' stroke-linecap='round'/>
+  <line class='book-accent' x1='5' y1='-1' x2='15' y2='-1' stroke='%23B83A10' stroke-width='1.5' stroke-linecap='round'/>
+  </g></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #F4F1EB;
+    --surface:  #FDFAF5;
+    --border:   #DDD8CF;
+    --border-soft: #EAE6DF;
+    --text:     #1C1917;
+    --text-2:   #6B665F;
+    --text-3:   #A09890;
+    --accent:   #B83A10;
+    --accent-2: #8A2A08;
+    --gold:     #C47C1A;
+    --blue:     #0E3386;
+    --header:   #1C1917;
+    --header-t: #F4F1EB;
+    --radius:   8px;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+    --serif: 'Fraunces', Georgia, serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ─────────────────────────────────────── */
+  header {
+    background: var(--header);
+    color: var(--header-t);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--header-t);
+    flex-shrink: 0;
+    opacity: 0.95;
+  }
+
+  .logo span {
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .logo .blue{
+    Color: var(--blue);
+    Font-style: italic;
+}
+
+  .tabs {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .tab {
+    background: none;
+    border: none;
+    color: rgba(244,241,235,0.45);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 5px 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: all 0.15s;
+  }
+
+  .tab:hover { color: rgba(244,241,235,0.8); background: rgba(255,255,255,0.06); }
+
+  .tab.active {
+    color: var(--header-t);
+    background: rgba(255,255,255,0.1);
+  }
+
+  .tab .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 10px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 5px;
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .hbtn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(244,241,235,0.8);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 11px;
+    border-radius: 5px;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .hbtn:hover {
+    background: rgba(255,255,255,0.14);
+    color: var(--header-t);
+  }
+
+  .hbtn.spinning svg { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── STATUS BAR ──────────────────────────────────── */
+  .statusbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 7px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: 0.01em;
+    min-height: 32px;
+  }
+
+  #progress-bar {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    height: 2px;
+    background: var(--accent);
+    z-index: 300;
+    width: 0;
+    transition: width 0.3s ease, opacity 0.4s;
+    opacity: 0;
+  }
+
+  #progress-bar.active { opacity: 1; }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────── */
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 22px 16px 60px;
+  }
+
+  /* ── VIEWS ───────────────────────────────────────── */
+  .view { display: block; }
+  .view.hidden { display: none; }
+
+  /* ── FEED ITEM ───────────────────────────────────── */
+  .item {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(6px);
+    animation: fadeUp 0.25s ease forwards;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+
+  .item:hover {
+    box-shadow: 0 2px 16px rgba(28,25,23,0.07);
+    border-color: var(--border);
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: none; }
+  }
+
+  .item-inner {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .item-body {
+    flex: 1;
+    padding: 14px 16px;
+    min-width: 0;
+  }
+
+  .item-img {
+    width: 110px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    background: var(--border-soft);
+    border-left: 1px solid var(--border-soft);
+  }
+
+  .item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  .item:hover .item-img img { transform: scale(1.03); }
+
+  .item-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+
+  .item-source {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .item-date {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.02em;
+  }
+
+  .item-title {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .item-title a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .item-title a:hover { color: var(--accent); }
+
+  .item-byline {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-bottom: 5px;
+    font-style: italic;
+  }
+
+  .item-synopsis {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .item-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .abtn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .abtn:hover {
+    border-color: var(--text-2);
+    color: var(--text);
+  }
+
+  .abtn.bmark-on {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(196,124,26,0.05);
+  }
+
+  .abtn.bmark-on:hover {
+    background: rgba(196,124,26,0.1);
+  }
+
+  .abtn.remove:hover {
+    border-color: #C0392B;
+    color: #C0392B;
+  }
+
+  /* dismiss animation */
+  .item.dismissing {
+    animation: dismissItem 0.22s ease forwards !important;
+  }
+
+  @keyframes dismissItem {
+    to { opacity: 0; transform: translateX(18px); max-height: 0; padding: 0; margin: 0; border-width: 0; }
+  }
+
+  /* ── EMPTY / ERROR STATES ─────────────────────────── */
+  .empty {
+    text-align: center;
+    padding: 64px 24px;
+    color: var(--text-3);
+  }
+
+  .empty-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.5;
+  }
+
+  .empty p {
+    font-family: var(--serif);
+    font-size: 16px;
+    font-style: italic;
+    color: var(--text-3);
+  }
+
+  .empty small {
+    display: block;
+    font-size: 12px;
+    margin-top: 6px;
+    font-family: var(--sans);
+    color: var(--text-3);
+  }
+
+  /* ── MODAL ───────────────────────────────────────── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28,25,23,0.5);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(2px);
+  }
+
+  .overlay.hidden { display: none; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(28,25,23,0.25);
+    border: 1px solid var(--border);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+
+  .modal-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-3);
+    font-size: 20px;
+    line-height: 1;
+    padding: 2px;
+    transition: color 0.15s;
+    display: flex;
+  }
+
+  .close-btn:hover { color: var(--text); }
+
+  .add-section {
+    flex-shrink: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 12px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .modal input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .modal input:focus { border-color: var(--accent); }
+  .modal input::placeholder { color: var(--text-3); }
+
+  .add-btn {
+    background: var(--text);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+    letter-spacing: 0.01em;
+    flex-shrink: 0;
+  }
+
+  .add-btn:hover { background: var(--accent); }
+
+  .add-msg {
+    font-size: 12px;
+    color: var(--accent);
+    min-height: 16px;
+    font-family: var(--mono);
+  }
+
+  .feed-scroll {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .feed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .feed-row:last-child { border-bottom: none; }
+
+  .feed-info { flex: 1; min-width: 0; }
+
+  .feed-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+
+  .feed-url {
+    font-size: 10.5px;
+    color: var(--text-3);
+    font-family: var(--mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .del-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--border);
+    font-size: 15px;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    display: flex;
+  }
+
+  .del-btn:hover { color: #C0392B; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">The Great <span>Geno</span> reader</span>
+  <div class="tabs">
+    <button class="tab active" id="tab-feed" onclick="switchTab('feed')">
+      Feed <span class="badge" id="feed-badge" style="display:none"></span>
+    </button>
+    <button class="tab" id="tab-bookmarks" onclick="switchTab('bookmarks')">
+      Bookmarks <span class="badge" id="bmark-badge" style="display:none"></span>
+    </button>
+    <button class="tab" id="tab-history" onclick="switchTab('history')">
+      History <span class="badge" id="hist-badge" style="display:none"></span>
+    </button>
+  </div>
+  <div class="header-right">
+    <button class="hbtn" id="refresh-btn" onclick="refreshAll()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 8a7 7 0 0 1 12-4.9L15 1v5h-5l1.8-1.8A5 5 0 1 0 13 8"/>
+      </svg>
+      Refresh
+    </button>
+    <button class="hbtn" onclick="openFeeds()">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="4" cy="4" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="4" cy="12" r="1.5"/>
+        <line x1="8" y1="4" x2="15" y2="4"/><line x1="8" y1="8" x2="15" y2="8"/><line x1="8" y1="12" x2="15" y2="12"/>
+      </svg>
+      Feeds
+    </button>
+  </div>
+</header>
+
+<div id="progress-bar"></div>
+
+<div class="statusbar">
+  <span id="status-msg">Initializing…</span>
+  <span id="status-count"></span>
+</div>
+
+<main>
+  <div id="view-feed" class="view"></div>
+  <div id="view-bookmarks" class="view hidden"></div>
+  <div id="view-history" class="view hidden"></div>
+</main>
+
+<!-- Feeds Modal -->
+<div class="overlay hidden" id="modal-feeds" onclick="overlayClick(event,'modal-feeds')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Manage Feeds</span>
+      <button class="close-btn" onclick="closeModal('modal-feeds')">✕</button>
+    </div>
+    <div class="add-section">
+      <div class="field-row">
+        <input type="url" id="feed-url-input" placeholder="https://example.com/feed.rss" />
+        <button class="add-btn" onclick="addFeed()">Add</button>
+      </div>
+      <input type="text" id="feed-name-input" placeholder="Feed label (optional)" style="width:100%;margin-bottom:6px" />
+      <div class="add-msg" id="add-msg"></div>
+    </div>
+    <div class="feed-scroll" id="feed-list"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIG & STATE
+// ═══════════════════════════════════════════════════
+
+const PROXIES = [
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  url => 'https://corsproxy.io/?' + encodeURIComponent(url),
+  url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+  
+];
+
+const MAX = 100;
+
+const DEFAULT_FEEDS = [
+  { url:'https://feeds.apnews.com/rss/apf-topnews',                          name:'AP Top News' },
+  { url:'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',         name:'NYT' },
+  { url:'http://feeds.bbci.co.uk/news/rss.xml',                              name:'BBC News' },
+  { url:'http://feeds.bbci.co.uk/news/world/rss.xml',                        name:'BBC World' },
+  { url:'https://feeds.npr.org/1001/rss.xml',                                name:'NPR News' },
+  { url:'https://feeds.reuters.com/reuters/topNews.rss',                     name:'Reuters' },
+  { url:'https://www.theguardian.com/world/rss',                             name:'The Guardian' },
+  { url:'https://feeds.npr.org/1014/rss.xml',                                name:'NPR Politics' },
+  { url:'https://feeds.npr.org/1019/rss.xml',                                name:'NPR Science' },
+  { url:'https://www.politico.com/rss/politicopicks.xml',                    name:'Politico' },
+  { url:'https://www.politico.com/rss/congress.xml',                         name:'Politico Congress' },
+  { url:'https://www.theverge.com/rss/index.xml',                            name:'The Verge' },
+  { url:'https://www.theverge.com/tech/rss/index.xml',                       name:'Verge Tech' },
+  { url:'https://www.theverge.com/reviews/rss/index.xml',                    name:'Verge Reviews' },
+  { url:'https://feeds.apnews.com/rss/apf-technology',                       name:'AP Tech' },
+  { url:'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml',       name:'NYT Tech' },
+  { url:'http://feeds.bbci.co.uk/news/technology/rss.xml',                   name:'BBC Tech' },
+  { url:'https://feeds.arstechnica.com/arstechnica/index',                   name:'Ars Technica' },
+  { url:'https://feeds.apnews.com/rss/apf-sports',                           name:'AP Sports' },
+  { url:'https://rss.nytimes.com/services/xml/rss/nyt/Sports.xml',           name:'NYT Sports' },
+  { url:'https://www.propublica.org/feeds/propublica/main',                  name:'ProPublica' },
+  { url:'https://theintercept.com/feed/?rss',                                name:'The Intercept' },
+  { url:'https://feeds.themarshallproject.org/marshall-project-all',         name:'Marshall Project' },
+  { url:'https://www.quantamagazine.org/feed/',                              name:'Quanta' },
+  { url:'https://www.scientificamerican.com/feed/',                          name:'Scientific American' },
+];
+
+// ─── Persistent state (localStorage) ────────────────
+function load(k, fb) {
+  try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : fb; }
+  catch { return fb; }
+}
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+
+let feeds     = load('rss_feeds', DEFAULT_FEEDS);
+let readSet   = new Set(load('rss_read', []));
+let bookmarks = load('rss_bookmarks', {});
+let history   = load('rss_history', {});
+let lastFetch = load('rss_lastfetch', null);
+
+// ─── Runtime state ────────────────────────────────────
+let allItems   = [];
+let activeTab  = 'feed';
+let fetchCount = 0;
+let fetchDone  = 0;
+
+// Restore Date objects in bookmarks
+Object.values(bookmarks).forEach(b => {
+  b.pubDate = new Date(b.pubDate);
+});
+Object.values(history).forEach(h => {
+  h.pubDate = new Date(h.puDate);
+});
+
+// ═══════════════════════════════════════════════════
+//  FETCH & PARSE
+// ═══════════════════════════════════════════════════
+
+async function tryFetch(url) {
+  for (const proxy of PROXIES) {
+    try {
+      const r = await fetch(proxy(url), { signal: AbortSignal.timeout(12000) });
+      if (!r.ok) continue;
+      const t = await r.text();
+      if (t && t.trim().startsWith('<')) return t;
+    } catch { /* try next */ }
+  }
+  throw new Error('All proxies failed');
+}
+
+function parseXML(xmlText, feed) {
+  const dp   = new DOMParser();
+  const doc  = dp.parseFromString(xmlText, 'application/xml');
+if (doc.querySelector('parsererror')) {
+  console.error(`XML parse error for ${feed.name} (${feed.url}):`, doc.querySelector('parsererror').textContent);
+  throw new Error('Bad XML');
+}
+
+  const rssItems  = [...doc.querySelectorAll('item')];
+  const atomItems = [...doc.querySelectorAll('entry')];
+  const nodes  = rssItems.length ? rssItems : atomItems;
+  const isAtom = !rssItems.length;
+
+  // Feed-level title fallback
+  const feedTitle = feed.name ||
+    doc.querySelector('channel > title, feed > title')?.textContent?.trim() ||
+    feed.url;
+
+  return nodes.map(n => {
+    const g  = sel => n.querySelector(sel)?.textContent?.trim() || '';
+    const ga = (sel, a) => n.querySelector(sel)?.getAttribute(a) || '';
+
+    const title = htmlDecode(g('title'));
+
+    let link = '';
+    if (isAtom) {
+      link = ga('link[rel="alternate"]','href') || ga('link[href]','href') || g('id');
+    } else {
+      link = g('link') || g('guid');
+    }
+
+    const dateStr = g('pubDate') || g('published') || g('updated') || g('dc\\:date');
+    const pubDate = dateStr ? new Date(dateStr) : new Date(0);
+
+    const author  = g('author name') || g('dc\\:creator') || g('creator') || g('author');
+
+    let raw = isAtom ? (g('summary') || g('content')) : (g('description') || g('content\\:encoded'));
+    const synopsis = stripTags(raw).slice(0, 420) + (raw.length > 420 ? '…' : '');
+
+    // Image: media:thumbnail → enclosure → img in content
+    let image =
+      n.querySelector('thumbnail')?.getAttribute('url') ||
+      n.querySelector('content[medium="image"]')?.getAttribute('url') ||
+      n.querySelector('content[type^="image"]')?.getAttribute('url') ||
+      n.querySelector('enclosure[type^="image"]')?.getAttribute('url') || '';
+
+    if (!image) {
+      const m = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (m) image = m[1];
+    }
+
+    if (!title && !link) return null;
+
+    const id = makeId(link || feedTitle + title + dateStr);
+
+    return {
+      id, feedName: feedTitle, feedUrl: feed.url,
+      title, link, pubDate: isNaN(pubDate) ? new Date(0) : pubDate,
+      author: author.replace(/<[^>]+>/g,'').trim(),
+      synopsis: synopsis.trim(),
+      image: /^https?:\/\//.test(image) ? image : '',
+    };
+  }).filter(Boolean);
+}
+
+// ─── Helpers ──────────────────────────────────────────
+function makeId(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(36);
+}
+
+function stripTags(s) {
+  if (!s) return '';
+  return s.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ').trim();
+}
+
+function htmlDecode(s) {
+  if (!s) return '';
+  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+          .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ');
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function relTime(d) {
+  if (!d || d.getTime() === 0) return '';
+  const m = Math.floor((Date.now() - d) / 60000);
+  if (m <  1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  if (days < 7) return `${days}d ago`;
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+
+// ═══════════════════════════════════════════════════
+//  LOAD ALL FEEDS
+// ═══════════════════════════════════════════════════
+
+async function refreshAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  setStatus('Refreshing all feeds…', '');
+  startProgress();
+
+  fetchCount = feeds.length;
+  fetchDone  = 0;
+  allItems   = [];
+
+  const results = await Promise.allSettled(
+    feeds.map(f => tryFetch(f.url).then(xml => parseXML(xml, f)))
+  );
+
+  results.forEach((r, i) => {
+    fetchDone++;
+    tickProgress(fetchDone / fetchCount);
+    if (r.status === 'fulfilled') allItems.push(...r.value);
+    else console.warn(`Feed failed [${feeds[i]?.name}]:`, r.reason?.message);
+  });
+
+  // Deduplicate + sort chrono (newest first)
+  const seen = new Set();
+  allItems = allItems
+    .filter(it => { if (seen.has(it.id)) return false; seen.add(it.id); return true; })
+    .sort((a, b) => b.pubDate - a.pubDate);
+
+  const now = new Date();
+  lastFetch = now.toISOString();
+  save('rss_lastfetch', lastFetch);
+
+  endProgress();
+  btn.classList.remove('spinning');
+
+  renderFeed();
+  if (activeTab === 'bookmarks') renderBookmarks();
+  updateBadges();
+
+  const t = now.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+  setStatus(`Updated ${t}`, '');
+}
+
+async function fetchOneFeed(feed) {
+  const xml = await tryFetch(feed.url);
+  return parseXML(xml, feed);
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+
+function renderFeed() {
+  const el  = document.getElementById('view-feed');
+  const visible = allItems.filter(it => !readSet.has(it.id)).slice(0, MAX);
+
+  document.getElementById('status-count').textContent =
+    visible.length ? `${visible.length} unread` : '';
+
+  if (!visible.length) {
+    el.innerHTML = `<div class="empty">
+      <span class="empty-icon">📭</span>
+      <p>All caught up.</p>
+      <small>Nothing new since your last refresh.</small>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = visible.map((it, i) => itemHTML(it, false, i)).join('');
+}
+
+function renderBookmarks() {
+  const el    = document.getElementById('view-bookmarks');
+  const items = Object.values(bookmarks).sort((a,b) => b.pubDate - a.pubDate);
+
+  updateBmarkBadge(items.length);
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty">
+      <span class="empty-icon">🔖</span>
+      <p>No bookmarks yet.</p>
+      <small>Tap the bookmark button on any article to save it here.</small>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = items.map((it, i) => itemHTML(it, true, i)).join('');
+}
+
+function renderHistory() {
+  console.log('renderHistory called');
+  const el    = document.getElementById('view-history');
+  const items = Object.values(history).sort((a,b) => b.pubDate - a.pubDate);
+
+  console.log('history object:', history);
+  console.log('items found:', items.length);
+  
+  updateHistBadge(items.length);
+
+  if (!items.length) {
+    el.innerHTML = `<div class="empty">
+      <span class="empty-icon">⏱️</span>
+      <p>No history yet.</p>
+      <small>Articles you mark done will appear here.</small>
+    </div>`;
+    return;
+  }
+
+  const header = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border-soft);">
+    <span style="font-size:13px; color:var(--text-3); font-family:var(--mono); letter-spacing:0.01em;">${items.length} article${items.length !== 1 ? 's' : ''}</span>
+    <button class="abtn" onclick="clearAllHistory()" style="border-color:#C0392B; color:#C0392B;">Clear All</button>
+  </div>`;
+
+  console.log('header HTML:', header);
+
+  el.innerHTML = header + items.map((it, i) => {
+    const itemStr = itemHTML(it, false, i);
+    return itemStr.replace('markDone', 'clearHistory');
+  }).join('');
+}
+
+function itemHTML(it, isBmark, idx) {
+  const bmarked = !!bookmarks[it.id];
+  const delay   = Math.min(idx * 0.03, 0.6);
+
+  const imgHtml = it.image
+    ? `<div class="item-img"><img src="${esc(it.image)}" alt="" loading="lazy" onerror="this.closest('.item-img').remove()"></div>`
+    : '';
+
+  const bylineHtml = it.author
+    ? `<div class="item-byline">${esc(it.author)}</div>`
+    : '';
+
+  const synopsisHtml = it.synopsis
+    ? `<p class="item-synopsis">${esc(it.synopsis)}</p>`
+    : '';
+
+  const bmarkBtn = isBmark
+    ? `<button class="abtn remove" onclick="removeBookmark('${it.id}')">✕ Remove</button>`
+    : `<button class="abtn ${bmarked ? 'bmark-on' : ''}" onclick="toggleBookmark('${it.id}')" id="bmbtn-${it.id}">
+        ${bmarked ? '★ Saved' : '☆ Bookmark'}
+       </button>`;
+
+  const doneBtn = isBmark
+    ? ''
+    : `<button class="abtn" onclick="markDone('${it.id}')">✓ Done</button>`;
+
+  return `<div class="item" id="item-${it.id}" style="animation-delay:${delay}s">
+    <div class="item-inner">
+      <div class="item-body">
+        <div class="item-meta">
+          <span class="item-source">${esc(it.feedName)}</span>
+          <span class="meta-dot"></span>
+          <span class="item-date">${relTime(it.pubDate)}</span>
+        </div>
+        <div class="item-title">
+          <a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>
+        </div>
+        ${bylineHtml}
+        ${synopsisHtml}
+        <div class="item-actions">
+          ${bmarkBtn}
+          ${doneBtn}
+        </div>
+      </div>
+      ${imgHtml}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════
+
+function markDone(id) {
+  const it = allItems.find(x => x.id === id);
+  if (it) {
+    history[id] = { ...it };
+    save('rss_history', history);
+  }
+  readSet.add(id);
+  save('rss_read', [...readSet]);
+  dismiss(id);
+  updateBadges();
+}
+
+function toggleBookmark(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+
+  if (bookmarks[id]) {
+    delete bookmarks[id];
+  } else {
+    bookmarks[id] = { ...it };
+  }
+  save('rss_bookmarks', bookmarks);
+
+  const btn = document.getElementById(`bmbtn-${id}`);
+  if (btn) {
+    const on = !!bookmarks[id];
+    btn.className = `abtn${on ? ' bmark-on' : ''}`;
+    btn.textContent = on ? '★ Saved' : '☆ Bookmark';
+  }
+  updateBadges();
+}
+
+function removeBookmark(id) {
+  delete bookmarks[id];
+  save('rss_bookmarks', bookmarks);
+  dismiss(id);
+  updateBadges();
+
+  setTimeout(() => {
+    if (!document.querySelector('#view-bookmarks .item')) renderBookmarks();
+  }, 280);
+}
+
+function clearHistory(id) {
+  delete history[id];
+  save('rss_history', history);
+  dismiss(id);
+  updateBadges();
+
+  setTimeout (() => {
+    if (!document.querySelector('#view-hostory .item')) renderHistory();
+  }, 280);
+}
+
+function clearAllHistory() {
+  if (!confirm('Clear all history? You lose this shit forever.')) return;
+  history = {}
+  save('rss_history', history);
+  renderHistory();
+  updateBadges();
+}
+
+function dismiss(id) {
+  const el = document.getElementById(`item-${id}`);
+  if (!el) return;
+  el.classList.add('dismissing');
+  setTimeout(() => {
+    el.remove();
+    const feed = document.getElementById('view-feed');
+    if (feed && !feed.querySelector('.item')) renderFeed();
+    document.getElementById('status-count').textContent =
+      (() => {
+        const n = document.querySelectorAll('#view-feed .item').length;
+        return n ? `${n} unread` : '';
+      })();
+  }, 250);
+}
+
+// ═══════════════════════════════════════════════════
+//  FEEDS MODAL
+// ═══════════════════════════════════════════════════
+
+function openFeeds() {
+  renderFeedList();
+  document.getElementById('modal-feeds').classList.remove('hidden');
+}
+
+function renderFeedList() {
+  document.getElementById('feed-list').innerHTML = feeds.map((f, i) => `
+    <div class="feed-row" id="frow-${i}">
+      <div class="feed-info">
+        <div class="feed-name">${esc(f.name || f.url)}</div>
+        <div class="feed-url">${esc(f.url)}</div>
+      </div>
+      <button class="del-btn" title="Remove" onclick="removeFeed(${i})">✕</button>
+    </div>`).join('');
+}
+
+async function addFeed() {
+  const urlEl  = document.getElementById('feed-url-input');
+  const nameEl = document.getElementById('feed-name-input');
+  const msgEl  = document.getElementById('add-msg');
+  const url    = urlEl.value.trim();
+
+  if (!url) { msgEl.textContent = 'Enter a feed URL first.'; return; }
+  if (feeds.some(f => f.url === url)) { msgEl.textContent = 'Already in your list.'; return; }
+
+  msgEl.style.color = 'var(--text-3)';
+  msgEl.textContent = 'Fetching…';
+
+  const name = nameEl.value.trim() ||
+    url.replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+
+  const feed = { url, name };
+
+  try {
+    const items = await fetchOneFeed(feed);
+    feeds.push(feed);
+    save('rss_feeds', feeds);
+    allItems.push(...items);
+    allItems.sort((a,b) => b.pubDate - a.pubDate);
+    const seen = new Set();
+    allItems = allItems.filter(it => { if(seen.has(it.id)) return false; seen.add(it.id); return true; });
+    urlEl.value  = '';
+    nameEl.value = '';
+    msgEl.style.color = 'var(--accent)';
+    msgEl.textContent = `Added "${name}" (${items.length} items).`;
+    renderFeedList();
+    renderFeed();
+    updateBadges();
+  } catch(e) {
+    msgEl.style.color = '#C0392B';
+    msgEl.textContent = 'Could not fetch that feed. Check the URL.';
+  }
+}
+
+// Allow Enter key to submit in URL field
+document.getElementById('feed-url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addFeed();
+});
+
+function removeFeed(idx) {
+  const f = feeds[idx];
+  if (!confirm(`Remove "${f.name || f.url}"?`)) return;
+  feeds.splice(idx, 1);
+  save('rss_feeds', feeds);
+  allItems = allItems.filter(it => it.feedUrl !== f.url);
+  renderFeedList();
+  renderFeed();
+  updateBadges();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function overlayClick(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+
+// ═══════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('view-feed').classList.toggle('hidden', tab !== 'feed');
+  document.getElementById('view-bookmarks').classList.toggle('hidden', tab !== 'bookmarks');
+  document.getElementById('view-history').classList.toggle('hidden', tab !== 'history');
+  document.getElementById('tab-feed').classList.toggle('active', tab === 'feed');
+  document.getElementById('tab-bookmarks').classList.toggle('active', tab === 'bookmarks');
+  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+  if (tab === 'bookmarks') renderBookmarks();
+  if (tab === 'history') renderHistory();
+}
+
+// ═══════════════════════════════════════════════════
+//  BADGES & STATUS
+// ═══════════════════════════════════════════════════
+
+function updateBadges() {
+  const unread = allItems.filter(it => !readSet.has(it.id)).length;
+  const bcount = Object.keys(bookmarks).length;
+  const hcount = Object.keys(history).length;
+
+  const fb = document.getElementById('feed-badge');
+  if (unread > 0) { fb.style.display = ''; fb.textContent = unread > 99 ? '99+' : unread; }
+  else fb.style.display = 'none';
+
+  updateBmarkBadge(bcount);
+  updateHistBadge(hcount);
+}
+
+function updateBmarkBadge(n) {
+  const bb = document.getElementById('bmark-badge');
+  if (n > 0) { bb.style.display = ''; bb.textContent = n; }
+  else bb.style.display = 'none';
+}
+
+function updateHistBadge(n) {
+  const hb = document.getElementById('hist-badge');
+  if (n > 0) { hb.style.display = ''; hb.textContent = n; }
+  else hb.style.display = 'none';
+}
+
+function setStatus(msg, count) {
+  document.getElementById('status-msg').textContent = msg;
+  if (count !== undefined) document.getElementById('status-count').textContent = count;
+}
+
+// ═══════════════════════════════════════════════════
+//  PROGRESS BAR
+// ═══════════════════════════════════════════════════
+
+let progressRaf = null;
+let progressTarget = 0;
+let progressCurrent = 0;
+
+function startProgress() {
+  const bar = document.getElementById('progress-bar');
+  bar.classList.add('active');
+  bar.style.transition = 'none';
+  progressCurrent = 0; progressTarget = 0;
+  bar.style.width = '0%';
+  tickProgress(0.05);
+}
+
+function tickProgress(pct) {
+  progressTarget = Math.min(pct * 95, 95);
+  document.getElementById('progress-bar').style.width = progressTarget + '%';
+}
+
+function endProgress() {
+  const bar = document.getElementById('progress-bar');
+  bar.style.width = '100%';
+  setTimeout(() => {
+    bar.style.opacity = '0';
+    setTimeout(() => {
+      bar.classList.remove('active');
+      bar.style.width = '0%';
+      bar.style.opacity = '';
+    }, 400);
+  }, 300);
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+
+refreshAll();
+</script>
+</body>
+</html>
